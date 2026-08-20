@@ -1,0 +1,294 @@
+# Reusable security gate for github.com/izam-mohammed repos.
+#
+# Stage 1 (gitleaks) BLOCKS the merge. Every other stage reports to the PR
+# without failing it — flip a stage to blocking by removing its `|| true`
+# once that repo's backlog is clear.
+#
+# Callers grant: contents: read, pull-requests: write. No secrets are passed.
+
+name: Security scan
+
+on:
+  workflow_call:
+    inputs:
+      ecosystem:
+        description: 'python | node | go | shell'
+        required: true
+        type: string
+      python-version:
+        required: false
+        type: string
+        default: '3.12'
+      go-version:
+        required: false
+        type: string
+        default: '1.23'
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  GITLEAKS_VERSION: '8.30.1'
+  OSV_VERSION: '2.5.1'
+
+jobs:
+  # ---------------------------------------------------------------- stage 1
+  secrets:
+    name: 'Stage 1 · Secrets (blocking)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install gitleaks
+        run: |
+          curl -sSfL -o /tmp/gl.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf /tmp/gl.tar.gz -C /tmp gitleaks
+          sudo install /tmp/gitleaks /usr/local/bin/gitleaks
+
+      - name: Scan working tree
+        run: gitleaks dir . --redact --verbose --exit-code 1
+
+      - name: Scan full history
+        if: github.event_name == 'schedule'
+        run: gitleaks git . --redact --verbose --exit-code 1
+
+  # ---------------------------------------------------------------- stage 2
+  deps:
+    name: 'Stage 2 · Dependencies'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      count: ${{ steps.count.outputs.n }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install osv-scanner
+        run: |
+          curl -sSfL -o /tmp/osv \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_VERSION}/osv-scanner_linux_amd64"
+          sudo install /tmp/osv /usr/local/bin/osv-scanner
+
+      - name: osv-scanner
+        run: osv-scanner scan source -r . --format json --output osv.json || true
+
+      - name: Set up Go
+        if: inputs.ecosystem == 'go'
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ inputs.go-version }}
+
+      - name: govulncheck
+        if: inputs.ecosystem == 'go'
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./... > govulncheck.txt 2>&1 || true
+          cat govulncheck.txt
+
+      - name: Count findings
+        id: count
+        if: always()
+        run: |
+          n=0
+          [ -f osv.json ] && n=$(jq '[.results[]?.packages[]?.vulnerabilities[]?] | length' osv.json 2>/dev/null || echo 0)
+          echo "n=${n}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: deps-report
+          path: |
+            osv.json
+            govulncheck.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # ---------------------------------------------------------------- stage 3
+  sast:
+    name: 'Stage 3 · SAST'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      count: ${{ steps.count.outputs.n }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install semgrep
+        run: pip install --quiet semgrep
+
+      - name: Select rulepacks
+        id: packs
+        env:
+          ECOSYSTEM: ${{ inputs.ecosystem }}
+        run: |
+          packs="--config p/default --config p/secrets --config p/security-audit --config p/owasp-top-ten --config p/cwe-top-25"
+          case "$ECOSYSTEM" in
+            python) packs="$packs --config p/python" ;;
+            node)   packs="$packs --config p/typescript --config p/javascript --config p/react" ;;
+            go)     packs="$packs --config p/golang" ;;
+            shell)  packs="$packs --config p/bash" ;;
+          esac
+          [ -n "$(find . -name 'Dockerfile*' -not -path './.git/*' -print -quit)" ] && packs="$packs --config p/dockerfile"
+          echo "packs=$packs" >> "$GITHUB_OUTPUT"
+
+      - name: semgrep
+        env:
+          SEMGREP_SEND_METRICS: 'off'
+          PACKS: ${{ steps.packs.outputs.packs }}
+        run: semgrep scan --metrics=off $PACKS --json --output semgrep.json || true
+
+      - name: Count findings
+        id: count
+        if: always()
+        run: |
+          n=0
+          [ -f semgrep.json ] && n=$(jq '.results | length' semgrep.json 2>/dev/null || echo 0)
+          echo "n=${n}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: sast-report
+          path: semgrep.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # ---------------------------------------------------------------- stage 4
+  workflows:
+    name: 'Stage 4 · Workflow audit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      count: ${{ steps.count.outputs.n }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: zizmor
+        run: |
+          pip install --quiet zizmor
+          if [ -d .github/workflows ]; then
+            zizmor --format json .github/workflows > zizmor.json 2>/dev/null || true
+          else
+            echo '[]' > zizmor.json
+          fi
+
+      - name: Count findings
+        id: count
+        if: always()
+        run: |
+          n=$(jq 'if type=="array" then length else 0 end' zizmor.json 2>/dev/null || echo 0)
+          echo "n=${n}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: workflow-report
+          path: zizmor.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # ---------------------------------------------------------------- stage 5
+  report:
+    name: 'Stage 5 · PR report'
+    runs-on: ubuntu-latest
+    needs: [secrets, deps, sast, workflows]
+    if: always() && github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+    steps:
+      # Every dynamic value arrives via env and is read with process.env —
+      # never interpolated into the script body. See zizmor template-injection.
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          R_SECRETS: ${{ needs.secrets.result }}
+          R_DEPS: ${{ needs.deps.result }}
+          R_SAST: ${{ needs.sast.result }}
+          R_WORKFLOWS: ${{ needs.workflows.result }}
+          N_DEPS: ${{ needs.deps.outputs.count }}
+          N_SAST: ${{ needs.sast.outputs.count }}
+          N_WORKFLOWS: ${{ needs.workflows.outputs.count }}
+          ECOSYSTEM: ${{ inputs.ecosystem }}
+        with:
+          script: |
+            const env = process.env;
+            const r = {
+              secrets:   env.R_SECRETS   || 'unknown',
+              deps:      env.R_DEPS      || 'unknown',
+              sast:      env.R_SAST      || 'unknown',
+              workflows: env.R_WORKFLOWS || 'unknown',
+            };
+            const n = {
+              deps:      env.N_DEPS      || '0',
+              sast:      env.N_SAST      || '0',
+              workflows: env.N_WORKFLOWS || '0',
+            };
+            const eco = env.ECOSYSTEM || '';
+            const icon = { success: '✅', failure: '❌', cancelled: '🚫', skipped: '⏭️' };
+            const ic = (k) => (icon[r[k]] || '❓') + ' ' + r[k];
+            const depTool = eco === 'go' ? 'osv-scanner + govulncheck' : 'osv-scanner';
+            const marker = '<!-- izam-security-scan -->';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const body = [
+              marker,
+              '## Security scan',
+              '',
+              '| Stage | Scope | Findings | Result |',
+              '|---|---|---|---|',
+              `| 1 · Secrets | gitleaks — **blocking** | — | ${ic('secrets')} |`,
+              `| 2 · Dependencies | ${depTool} | ${n.deps} | ${ic('deps')} |`,
+              `| 3 · SAST | semgrep (${eco} packs) | ${n.sast} | ${ic('sast')} |`,
+              `| 4 · Workflows | zizmor | ${n.workflows} | ${ic('workflows')} |`,
+              '',
+              r.secrets === 'failure'
+                ? '> **A secret was detected — this PR cannot merge.** Rotate the credential first, then remove it from the diff. Deleting the line alone is not enough once it has been pushed.'
+                : '> Stages 2–4 report only; they do not block. Artifacts are retained 14 days.',
+              '',
+              `_Updated ${new Date().toISOString()} · [run](${runUrl})_`,
+            ].join('\n');
+
+            const list = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, per_page: 100,
+            });
+            const prev = list.find(c => c.body && c.body.includes(marker));
+            if (prev) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: prev.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body,
+              });
+            }
