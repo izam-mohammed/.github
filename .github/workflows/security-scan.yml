@@ -5,6 +5,9 @@
 # once that repo's backlog is clear.
 #
 # Callers grant: contents: read, pull-requests: write. No secrets are passed.
+# Runs on GitHub-hosted ubuntu-latest unless the caller passes `runs-on`.
+# Nothing needs sudo, so it also runs on a self-hosted runner with no sudo
+# rights; the tools land in $RUNNER_TEMP/bin, which is wiped after each job.
 
 name: Security scan
 
@@ -23,6 +26,11 @@ on:
         required: false
         type: string
         default: '1.25'
+      runs-on:
+        description: 'JSON runner label(s), e.g. ''["self-hosted","linux","izam-linux"]'''
+        required: false
+        type: string
+        default: '"ubuntu-latest"'
 
 permissions: {}
 
@@ -38,7 +46,7 @@ jobs:
   # ---------------------------------------------------------------- stage 1
   secrets:
     name: 'Stage 1 · Secrets (blocking)'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
     timeout-minutes: 10
     permissions:
       contents: read
@@ -50,10 +58,12 @@ jobs:
 
       - name: Install gitleaks
         run: |
-          curl -sSfL -o /tmp/gl.tar.gz \
+          curl -sSfL -o "$RUNNER_TEMP/gl.tar.gz" \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          tar -xzf /tmp/gl.tar.gz -C /tmp gitleaks
-          sudo install /tmp/gitleaks /usr/local/bin/gitleaks
+          tar -xzf "$RUNNER_TEMP/gl.tar.gz" -C "$RUNNER_TEMP" gitleaks
+          mkdir -p "$RUNNER_TEMP/bin"
+          install "$RUNNER_TEMP/gitleaks" "$RUNNER_TEMP/bin/gitleaks"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
       - name: Scan working tree
         run: gitleaks dir . --redact --verbose --exit-code 1
@@ -65,7 +75,7 @@ jobs:
   # ---------------------------------------------------------------- stage 2
   deps:
     name: 'Stage 2 · Dependencies'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
     timeout-minutes: 15
     permissions:
       contents: read
@@ -78,9 +88,11 @@ jobs:
 
       - name: Install osv-scanner
         run: |
-          curl -sSfL -o /tmp/osv \
+          curl -sSfL -o "$RUNNER_TEMP/osv" \
             "https://github.com/google/osv-scanner/releases/download/v${OSV_VERSION}/osv-scanner_linux_amd64"
-          sudo install /tmp/osv /usr/local/bin/osv-scanner
+          mkdir -p "$RUNNER_TEMP/bin"
+          install "$RUNNER_TEMP/osv" "$RUNNER_TEMP/bin/osv-scanner"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
       - name: osv-scanner
         run: osv-scanner scan source -r . --format json --output osv.json || true
@@ -119,7 +131,7 @@ jobs:
   # ---------------------------------------------------------------- stage 3
   sast:
     name: 'Stage 3 · SAST'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
     timeout-minutes: 20
     permissions:
       contents: read
@@ -177,7 +189,7 @@ jobs:
   # ---------------------------------------------------------------- stage 4
   workflows:
     name: 'Stage 4 · Workflow audit'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
     timeout-minutes: 10
     permissions:
       contents: read
@@ -219,7 +231,7 @@ jobs:
   # ---------------------------------------------------------------- stage 5
   report:
     name: 'Stage 5 · PR report'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
     needs: [secrets, deps, sast, workflows]
     if: always() && github.event_name == 'pull_request'
     permissions:
