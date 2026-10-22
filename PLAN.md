@@ -5,5 +5,5 @@ here when every box in it is ticked.
 
 ### Phase 1: repository hygiene
 
-- [ ] `plans/04-repo-hygiene.md` - Dependabot covers the pre-commit hooks,
+- [x] `plans/04-repo-hygiene.md` - Dependabot covers the pre-commit hooks,
   and a security policy says how to report a problem.

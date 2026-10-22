@@ -86,27 +86,27 @@ The YAML parses; GitHub accepts the Dependabot config on the PR.
 
 ### Phase 1: topics
 
-- [ ] The repository topics set to `ci`, `devsecops`, `github-actions`,
+- [x] The repository topics set to `ci`, `devsecops`, `github-actions`,
   `gitleaks`, `osv-scanner`, `reusable-workflows`, `security`, `semgrep`,
   `zizmor` with `gh repo edit`; check: `gh repo view --json
   repositoryTopics` lists them.
 
 ### Phase 2: Dependabot
 
-- [ ] `.github/dependabot.yml` gains a `pre-commit` entry beside the
+- [x] `.github/dependabot.yml` gains a `pre-commit` entry beside the
   existing `github-actions` one; check: the file parses with
   `yaml.safe_load`.
 
 ### Phase 3: security policy
 
-- [ ] `SECURITY.md` lands with supported versions, the private reporting
+- [x] `SECURITY.md` lands with supported versions, the private reporting
   link, what happens next and the scope (`security-scan.yml` and the
   pre-commit baseline); check: every link in it points at this
   repository.
 
 ### Phase 4: open the PR
 
-- [ ] The branch pushed and its PR opened against `main` (or, if one is
+- [x] The branch pushed and its PR opened against `main` (or, if one is
   already open for this branch, its body brought up to date) with the
   title `chore: dependabot and security policy`, a body naming this plan,
   what changed and why, and the checks run with their result. The PR's
