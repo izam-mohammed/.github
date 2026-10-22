@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400" role="img" aria-labelledby="t d">
+  <title id="t">.github</title>
+  <desc id="d">A striped boom gate that comes down for secrets only, while an old dependency, sketchy code and brave yaml drive past, each with a note saying noted: the shared security gate stops one kind of trouble and comments on the rest.</desc>
+  <defs>
+    <pattern id="stripes" width="48" height="48" patternUnits="userSpaceOnUse">
+      <rect width="24" height="48" fill="#dc2626"/>
+      <rect x="24" width="24" height="48" fill="#f4f4f5"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="400" rx="24" fill="#0e1117"/>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace">
+    <text x="600" y="72" font-size="16" text-anchor="middle" fill="#8b93a1">~ shared ci. one rule, actually enforced</text>
+    <text x="600" y="128" font-size="52" font-weight="700" text-anchor="middle" fill="#f4f4f5">.github</text>
+    <g font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="20" text-anchor="middle">
+      <text x="600" y="168" fill="#d4d4d8">Checks every pull request for four kinds of trouble.</text>
+      <text x="600" y="198" fill="#9ca3af">Stops one. The rest get a strongly worded comment.</text>
+    </g>
+
+    <!-- the gate -->
+    <path d="M84 334 H600" stroke="#3f4655" stroke-width="2" fill="none"/>
+    <rect x="104" y="322" width="44" height="12" rx="3" fill="#6b7280"/>
+    <rect x="113" y="238" width="26" height="86" rx="4" fill="#6b7280"/>
+    <rect x="139" y="252" width="430" height="22" rx="4" fill="url(#stripes)" stroke="#dc2626" stroke-width="2"/>
+    <circle cx="126" cy="263" r="6" fill="#0e1117"/>
+    <rect x="232" y="288" width="176" height="30" rx="15" fill="#dc2626"/>
+    <text x="320" y="308" font-size="15" font-weight="700" text-anchor="middle" fill="#ffffff">STOP: secrets</text>
+
+    <!-- everything else, driving past -->
+    <g font-size="14">
+      <rect x="626" y="244" width="160" height="74" rx="10" fill="#161a22" stroke="#2a303c"/>
+      <text x="642" y="270" fill="#e5e7eb">old dependency</text>
+      <rect x="642" y="282" width="72" height="24" rx="12" fill="#1f2937"/>
+      <text x="678" y="299" font-size="13" text-anchor="middle" fill="#cbd5e1">noted</text>
+
+      <rect x="802" y="244" width="160" height="74" rx="10" fill="#161a22" stroke="#2a303c"/>
+      <text x="818" y="270" fill="#e5e7eb">sketchy code</text>
+      <rect x="818" y="282" width="72" height="24" rx="12" fill="#1f2937"/>
+      <text x="854" y="299" font-size="13" text-anchor="middle" fill="#cbd5e1">noted</text>
+
+      <rect x="978" y="244" width="160" height="74" rx="10" fill="#161a22" stroke="#2a303c"/>
+      <text x="994" y="270" fill="#e5e7eb">brave yaml</text>
+      <rect x="994" y="282" width="72" height="24" rx="12" fill="#1f2937"/>
+      <text x="1030" y="299" font-size="13" text-anchor="middle" fill="#cbd5e1">noted</text>
+    </g>
+    <text x="882" y="348" font-size="13" text-anchor="middle" fill="#8b93a1">(tightened once the backlog is clear. any day now)</text>
+  </g>
+</svg>

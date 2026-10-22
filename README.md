@@ -1,6 +1,12 @@
-# .github
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg">
+    <img src="assets/banner-light.svg" alt="A boom gate that comes down for secrets only, while every other finding drives past with a note saying noted." width="100%">
+  </picture>
+</p>
 
-Shared CI for repositories under [`izam-mohammed`](https://github.com/izam-mohammed).
+**.github**, shared CI for repositories under [`izam-mohammed`](https://github.com/izam-mohammed).
 
 ## `security-scan.yml`
 

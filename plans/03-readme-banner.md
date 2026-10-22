@@ -93,12 +93,12 @@ and repository instructions for recording useful development findings.
 
 ### Phase 1: the rough cut, the banner on the README (needs you: try it)
 
-- [ ] A fresh concept of what the gate does, checked against the skill's
+- [x] A fresh concept of what the gate does, checked against the skill's
   `concepts-used.md`, built into `assets/banner-light.svg` and
   `assets/banner-dark.svg` with the skill's build script exiting 0.
-- [ ] `README.md` opens with the `<picture>` block and alt text naming what
+- [x] `README.md` opens with the `<picture>` block and alt text naming what
   the gate does.
-- [ ] Check: `make check` (or `pre-commit run --all-files` before
+- [x] Check: `make check` (or `pre-commit run --all-files` before
   `plans/01-quality-gates.md` lands) passes, and the skill's preview shows
   both themes with nothing overlapping.
 - [ ] You try it: open the branch's README on GitHub in light and dark
@@ -109,7 +109,7 @@ and repository instructions for recording useful development findings.
 - [ ] The concept is added to the skill's `concepts-used.md` so no other
   banner repeats it, and anything you asked for in Phase 1 is applied to
   `assets/banner-light.svg` and `assets/banner-dark.svg`.
-- [ ] Check: the skill's build still exits 0.
+- [x] Check: the skill's build still exits 0.
 
 ### Phase 3: open the PR
 
