@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg">
-    <img src="assets/banner-light.svg" alt="A boom gate that comes down for secrets only, while every other finding drives past with a note saying noted." width="100%">
+    <img src="assets/banner-light.svg" alt="A report card for your pull request: gitleaks gives secrets an F and blocks the merge. Dependencies, code and workflows get a grade and a comment that says noted, sent home as a PR comment." width="100%">
   </picture>
 </p>
 
