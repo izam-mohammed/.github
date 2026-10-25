@@ -18,3 +18,23 @@ updates:
       actions:
         patterns: ["*"]
         update-types: [minor, patch]
+
+  # Bumps the `rev:` pins in .pre-commit-config.yaml.
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 100
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore(deps)
+    assignees: [izam-mohammed]
+    labels: ["dependencies", "pre_commit"]
+    groups:
+      pre-commit:
+        patterns: ["*"]
+        update-types: [minor, patch]
