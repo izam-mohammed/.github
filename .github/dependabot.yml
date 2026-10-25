@@ -2,5 +2,19 @@ version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
-    schedule: { interval: weekly }
-    commit-message: { prefix: "ci(deps)" }
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci(deps)
+    assignees: [izam-mohammed]
+    labels: ["dependencies", "github_actions", "ci"]
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: [minor, patch]
