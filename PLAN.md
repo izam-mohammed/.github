@@ -25,3 +25,8 @@ The language gate spans three repositories; their order is
 ### Phase 3: the README
 
 - [ ] `plans/03-readme-banner.md` - a banner pair at the top of the README.
+
+### Phase 4: repository hygiene
+
+- [x] `plans/04-repo-hygiene.md` - Dependabot covers the pre-commit hooks,
+  and a security policy says how to report a problem.
