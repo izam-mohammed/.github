@@ -233,7 +233,11 @@ jobs:
     name: 'Stage 5 · PR report'
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     needs: [secrets, deps, sast, workflows]
-    if: always() && github.event_name == 'pull_request'
+    # A fork's pull request gets a read-only token, so the comment would fail
+    # with a 403 and mark the run red though every scan passed. Skip it there.
+    if: >-
+      always() && github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       pull-requests: write
     steps:
